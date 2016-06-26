@@ -24,6 +24,7 @@
 # Imports
 #-----------------------------------------------------------------------#
 import random
+from components import Tile
 
 # Class
 #-----------------------------------------------------------------------#
@@ -34,7 +35,7 @@ class WorldConfig(object):
 		self.construct(params)
 	
 	def construct(self, params):
-		self.tile_types = [Tile(params[x]) for x in params if x != 'order']
+		self.tile_types = [Tile(params[x]) for x in params if type(x) == int]
 		self.order = params['order']
 		
 class WorldGenerator(object):
@@ -52,7 +53,6 @@ class WorldGenerator(object):
 				if tile_type.name == self.config.order[i]:
 					self.draw_layers(tile_type)
 		self.tilemap.player_start = list(self.start_blob(self.tilemap.width, self.tilemap.height))
-		self.tilemap.player_goal = list(self.start_blob(self.tilemap.width, self.tilemap.height))
 		return self.tilemap
 
 	def draw_layers(self, tile_type):

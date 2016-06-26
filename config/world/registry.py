@@ -23,67 +23,12 @@
 #-----------------------------------------------------------------------#
 # Imports
 #-----------------------------------------------------------------------#
-from constants import *
+import world_layer_01
+import world_layer_02
 
-# WorldGen Configs
+# Main
 #-----------------------------------------------------------------------#
-params = {
-	'order': {
-		0: 'water',
-		1: 'hill',
-		2: 'lowhill',
-		3: 'mountain',
-		4: 'forest'
-	},
-	'draw_coast': False,
-	WATER: {
-		'name': 'water',
-		'layers': 6,
-		'recursive': False,
-		'clusters': {
-			0: {
-				'size': 8,
-				'nodes': 8,
-				'x_shift': 0,
-				'y_shift': 0,
-				'recursive': False,
-				'reachable': False,
-				'tile': WATER,
-				'base': [
-					GRASS
-				],
-				'shapes': {
-					0: {
-						'length': 7,
-						'width': 2
-					},
-				}
-			}
-		}
-	},
-	HILL: {
-		'name': 'hill',
-		'layers': 6,
-		'recursive': False,
-		'clusters': {
-			0: {
-				'size': 8,
-				'nodes': 8,
-				'x_shift': 0,
-				'y_shift': 0,
-				'recursive': False,
-				'reachable': True,
-				'tile': HILL,
-				'base': [
-					GRASS
-				],
-				'shapes': {
-					0: {
-						'length': 7,
-						'width': 2
-					},
-				}
-			}
-		}
-	}
+config = {
+	0: world_layer_01,
+	1: world_layer_02
 }

@@ -21,6 +21,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #-----------------------------------------------------------------------#
+# Imports
+#-----------------------------------------------------------------------#
+from constants import *
+
 # WorldGen Configs
 #-----------------------------------------------------------------------#
 params = {
@@ -31,6 +35,7 @@ params = {
 		3: 'mountain',
 		4: 'forest'
 	},
+	'draw_coast': True,
 	WATER: {
 		'name': 'water',
 		'layers': 3,

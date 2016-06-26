@@ -1,24 +1,48 @@
 #!/usr/bin/env python
+# Author: Kelcey Jamison-Damage
+# Python: 2.66 +
+# OS: CentOS | Other
+# Portable: True
+# License: Apache 2.0
 
+# License
+#-----------------------------------------------------------------------#
+# Copyright [2016] [Kelcey Jamison-Damage]
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#    http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#-----------------------------------------------------------------------#
+# Imports
+#-----------------------------------------------------------------------#
 import pygame
 from pygame.locals import *
 import random
-from generators import Map, WorldGenerator, WorldConfig, map_coast
-from a_star import AStar
-from world_config import *
+from lib.tilemap import Map
+from lib.world import WorldConfig, WorldGenerator, map_coast
+from lib.pathfinding import AStar
+from config.world.constants import *
+from config import world
 
+# Functions
+#-----------------------------------------------------------------------#
 def gen_map(tilemap):
 	try:
-		tilemap = WorldGenerator(params).generate(tilemap)
-		tilemap = map_coast(tilemap)
-		tilemap = WorldGenerator(params2).generate(tilemap)
-		ready = True
-	except Exception, e:
-		ready = False
-	if ready == False:
-		return gen_map(tilemap)
-	else:
+		for x in range(len(world.config)):
+			tilemap = WorldGenerator(world.config[x].params).generate(tilemap)
+			if world.config[x].params['draw_coast'] == True:
+				tilemap = map_coast(tilemap)
 		return tilemap
+	except Exception, e:
+		return gen_map(tilemap)
 
 def plot_course(playerPos, tilemap, goal=None):
 	try:
@@ -38,16 +62,13 @@ def plot_course(playerPos, tilemap, goal=None):
 	else:
 		return route, tilemap
 
+# Main
+#-----------------------------------------------------------------------#
 tilemap = Map(MAPWIDTH, MAPHEIGHT)
 tilemap = gen_map(tilemap)
-gx = tilemap.player_goal[0]
-gy = tilemap.player_goal[1]
-tilemap._map[gx][gy].terrain = CITY
 tilemap.regen_cells()
 tilemap.update_reachable()
 astar = AStar(tilemap.width, tilemap.height)
-route = astar.solve(tilemap.player_start, tilemap.player_goal, tilemap.cells)
-tilemap.display_route(route)
 
 
 BROWN = (153, 76, 0)
@@ -94,25 +115,25 @@ inventory = {
 }
 
 textures = {
-	HILL: pygame.image.load('10hills.png'),
-	GRASS: pygame.image.load('10grass.png'),
-	WATER: pygame.image.load('10water.png'),
-	FOREST: pygame.image.load('10forest.png'),
-	COAST: pygame.image.load('10coast.png'),
-	CITY: pygame.image.load('10city.png'),
-	LOWHILL: pygame.image.load('10lowhills.png'),
-	MOUNTAIN: pygame.image.load('10mountain.png')
+	HILL: pygame.image.load('{0}10hills.png'.format(TEXTURE_PATH)),
+	GRASS: pygame.image.load('{0}10grass.png'.format(TEXTURE_PATH)),
+	WATER: pygame.image.load('{0}10water.png'.format(TEXTURE_PATH)),
+	FOREST: pygame.image.load('{0}10forest.png'.format(TEXTURE_PATH)),
+	COAST: pygame.image.load('{0}10coast.png'.format(TEXTURE_PATH)),
+	CITY: pygame.image.load('{0}10city.png'.format(TEXTURE_PATH)),
+	LOWHILL: pygame.image.load('{0}10lowhills.png'.format(TEXTURE_PATH)),
+	MOUNTAIN: pygame.image.load('{0}10mountain.png'.format(TEXTURE_PATH))
 }
 
 pygame.init()
 DISPLAYSURF = pygame.display.set_mode((MAPWIDTH*(TILESIZE), MAPHEIGHT*(TILESIZE) + 100))
-PLAYER = pygame.image.load('10player.png').convert_alpha()
+PLAYER = pygame.image.load('{0}10player.png'.format(TEXTURE_PATH)).convert_alpha()
 playerPos = tilemap.player_start
 fps_clock = pygame.time.Clock()
 fps_clock.tick(24)
 DISPLAYSURF.fill(BLACK)
 
-INVFONT = pygame.font.Font('FreeSansBold.ttf', 18)
+INVFONT = pygame.font.Font('{0}FreeSansBold.ttf'.format(FONT_PATH), 18)
 
 GATHER = 10
 TERRAFORM = 100
@@ -120,7 +141,7 @@ TERRAFORM = 100
 print len(tilemap._map)
 print len(tilemap._map[0])
 
-path = route
+path = [playerPos]
 while True:
 	
 	placePosition = 10
@@ -197,7 +218,7 @@ while True:
 			path = route
 
 	playerPos = path.pop(0)
-	if len(path) == 1:
+	if len(path) == 0:
 		route, tilemap = plot_course(playerPos, tilemap)
 		path = route
 
