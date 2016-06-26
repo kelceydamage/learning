@@ -1,6 +1,6 @@
 ## REQUIRES pygame
 
-LEARNING is a playground for exploring ai in randomly generated self playing game.
+LEARNING is a playground for exploring AI in randomly generated self playing game.
 
 # Usage
 
