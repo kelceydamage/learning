@@ -29,6 +29,8 @@ import random
 from lib.tilemap import Map
 from lib.world import WorldConfig, WorldGenerator, map_coast
 from lib.pathfinding import AStar
+from ai.abilities import *
+from config.game.configuration import *
 from config.world.constants import *
 from config import world
 
@@ -44,126 +46,73 @@ def gen_map(tilemap):
 	except Exception, e:
 		return gen_map(tilemap)
 
-def plot_course(playerPos, tilemap, goal=None):
-	try:
-		if goal == None:
-			cell = tilemap.start_blob()
-			goal = [cell.x, cell.y]
-		route = astar.solve(playerPos, goal, tilemap.cells)
-		tilemap.clean_up_map()
-		tilemap.display_route(route)
-		route.reverse()
-		print route
-		ready = True
-	except Exception, e:
-		ready = False
-	if ready == False:
-		return plot_course(playerPos, tilemap, None)
-	else:
-		return route, tilemap
-
 # Main
 #-----------------------------------------------------------------------#
 tilemap = Map(MAPWIDTH, MAPHEIGHT)
 tilemap = gen_map(tilemap)
+tilemap.speed = SPEED
 tilemap.regen_cells()
 tilemap.update_reachable()
 astar = AStar(tilemap.width, tilemap.height)
-
-
-BROWN = (153, 76, 0)
-GREEN = (0, 255, 0)
-BLUE = (0, 0, 255)
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-
-terrain_names = {
-	0: 'Hills',
-	1: 'Grass',
-	2: 'Water',
-	3: 'Forest',
-	4: 'Coast',
-	5: 'Road',
-	8: 'Lowhills',
-	9: 'Mountain'
-}
-
-speed = {
-	0: 100,
-	1: 1,
-	2: 0,
-	3: 60,
-	4: 80,
-	5: 150,
-	7: 150,
-	8: 50,
-	9: 0
-}
-
-colors = {
-	HILL: BROWN,
-	GRASS: GREEN,
-	WATER: BLUE,
-	PLAYER: BLACK
-}
-
-inventory = {
-	HILL: 0,
-	GRASS: 0,
-	COAST: 0,
-	FOREST: 0
-}
-
-textures = {
-	HILL: pygame.image.load('{0}10hills.png'.format(TEXTURE_PATH)),
-	GRASS: pygame.image.load('{0}10grass.png'.format(TEXTURE_PATH)),
-	WATER: pygame.image.load('{0}10water.png'.format(TEXTURE_PATH)),
-	FOREST: pygame.image.load('{0}10forest.png'.format(TEXTURE_PATH)),
-	COAST: pygame.image.load('{0}10coast.png'.format(TEXTURE_PATH)),
-	CITY: pygame.image.load('{0}10city.png'.format(TEXTURE_PATH)),
-	LOWHILL: pygame.image.load('{0}10lowhills.png'.format(TEXTURE_PATH)),
-	MOUNTAIN: pygame.image.load('{0}10mountain.png'.format(TEXTURE_PATH))
-}
+abilities = Abilities(astar)
 
 pygame.init()
-DISPLAYSURF = pygame.display.set_mode((MAPWIDTH*(TILESIZE), MAPHEIGHT*(TILESIZE) + 100))
-PLAYER = pygame.image.load('{0}10player.png'.format(TEXTURE_PATH)).convert_alpha()
+DISPLAYSURF = pygame.display.set_mode((MAPWIDTH*(TILESIZE), MAPHEIGHT*(TILESIZE) + 250))
+PLAYER = pygame.image.load(PLAYER).convert_alpha()
+PATH = pygame.image.load(PATH).convert_alpha()
+PTRAIN = pygame.image.load(PTRAIN).convert_alpha()
+for texture in TEXTURES:
+	TEXTURES[texture] = pygame.image.load(TEXTURES[texture])
 playerPos = tilemap.player_start
 fps_clock = pygame.time.Clock()
-fps_clock.tick(24)
+fps_clock.tick(10)
 DISPLAYSURF.fill(BLACK)
 
-INVFONT = pygame.font.Font('{0}FreeSansBold.ttf'.format(FONT_PATH), 18)
+INVFONT = pygame.font.Font('{0}FreeSansBold.ttf'.format(FONT_PATH), 14)
 
-GATHER = 10
-TERRAFORM = 100
+gather = INIT_GATHER
+terraform = INIT_TERRAFORM
 
-print len(tilemap._map)
-print len(tilemap._map[0])
-
+wait = 0
 path = [playerPos]
+destination = playerPos
+turns = 0
+h_time = 0
+s_time = 0
 while True:
+	abilities.position = playerPos
+	turns += 1
 	
 	placePosition = 10
 	meta = tilemap._map[playerPos[0]][playerPos[1]]
-	string = 'Coordinates: x={0[1]}, y={0[0]} | Terrain: {1} | Resources: {2} | Inventory: {4} | Objects: {3}'.format(
-		(meta.x, meta.y),
-		terrain_names[meta.terrain],
-		meta.resources,
-		meta.objects,
-		inventory
-		)
+	string = 'Turns: {0}'.format(turns) + ' ' * 100
+	textObj = INVFONT.render(string, True, WHITE, BLACK) 
+	DISPLAYSURF.blit(textObj, (placePosition, MAPHEIGHT*TILESIZE))
+	string = 'Coordinates: x={0}, y={1}'.format(meta.x, meta.y) + ' ' * 100
 	textObj = INVFONT.render(string, True, WHITE, BLACK) 
 	DISPLAYSURF.blit(textObj, (placePosition, MAPHEIGHT*TILESIZE+20))
-	placePosition = 10
-	meta = tilemap._map[playerPos[0]][playerPos[1]]
-	string = 'Gather Rate: {0} | Speed Multiplier {1}%'.format(
-		GATHER,
-		speed[meta.terrain]
-		)
+	string = 'Terrain: {0}'.format(TERRAIN_NAMES[meta.terrain] + ' ' * 100)
+	textObj = INVFONT.render(string, True, WHITE, BLACK) 
+	DISPLAYSURF.blit(textObj, (placePosition, MAPHEIGHT*TILESIZE+40))
+	string = 'Resources: {0}'.format(str(meta.resources) + ' ' * 100)
 	textObj = INVFONT.render(string, True, WHITE, BLACK) 
 	DISPLAYSURF.blit(textObj, (placePosition, MAPHEIGHT*TILESIZE+60))
-	
+	string = 'Inventory: {0}'.format(str(INVENTORY) + ' ' * 100)
+	textObj = INVFONT.render(string, True, WHITE, BLACK) 
+	DISPLAYSURF.blit(textObj, (placePosition, MAPHEIGHT*TILESIZE+80))
+	meta = tilemap._map[playerPos[0]][playerPos[1]]
+	string = 'Gather Rate: {0}'.format(str(gather) + ' ' * 100)
+	textObj = INVFONT.render(string, True, WHITE, BLACK) 
+	DISPLAYSURF.blit(textObj, (placePosition, MAPHEIGHT*TILESIZE+100))
+	string = 'Speed Penalty: {0}% | Heuristic: {1} | Turns To Cross: {2}'.format(
+		round(SPEED[meta.terrain][1] / float(SPEED[GRASS][1]), 2) * 100, SPEED[meta.terrain][0], SPEED[meta.terrain][1] * 5
+		) + ' ' * 100
+	textObj = INVFONT.render(string, True, WHITE, BLACK) 
+	DISPLAYSURF.blit(textObj, (placePosition, MAPHEIGHT*TILESIZE+120))
+	string = 'Turns To Destination(Heuristic): {0} | Turns To Destination(ShortestPath): {1}'.format(abilities.route_times[0], abilities.route_times[1]) + ' ' * 100
+	textObj = INVFONT.render(string, True, WHITE, BLACK) 
+	DISPLAYSURF.blit(textObj, (placePosition, MAPHEIGHT*TILESIZE+140))
+
 	for event in pygame.event.get():
 		#print event
 		if event.type == QUIT:
@@ -173,19 +122,15 @@ while True:
 			if (event.key == K_RIGHT):
 				if playerPos[0] < MAPWIDTH and tilemap._map[playerPos[0] + 1][playerPos[1]].terrain != 2:
 					playerPos[0] += 1
-					print playerPos
 			if (event.key == K_LEFT):
 				if playerPos[0] > 0 and tilemap._map[playerPos[0] - 1][playerPos[1]].terrain != 2:
 					playerPos[0] -= 1
-					print playerPos
 			if (event.key == K_UP):
 				if playerPos[1] > 0 and tilemap._map[playerPos[0]][playerPos[1] - 1].terrain != 2:
 					playerPos[1] -= 1
-					print playerPos
 			if (event.key == K_DOWN):
 				if playerPos[1] < MAPHEIGHT and tilemap._map[playerPos[0]][playerPos[1] + 1].terrain != 2:
 					playerPos[1] += 1
-					print playerPos
 			if (event.key == K_SPACE):
 				current_tile = tilemap._map[playerPos[0]][playerPos[1]].terrain
 				if current_tile <= 4:
@@ -201,12 +146,12 @@ while True:
 			if (event.key == K_e):
 				current_tile = tilemap[playerPos[0]][playerPos[1]]['terrain']
 				if current_tile == 1 :
-					if tilemap[playerPos[0]][playerPos[1]]['resources'][FOREST] < TERRAFORM and inventory[FOREST] > 0:
+					if tilemap[playerPos[0]][playerPos[1]]['resources'][FOREST] < terraform and inventory[FOREST] > 0:
 						inventory[FOREST] -= GATHER
 						tilemap[playerPos[0]][playerPos[1]]['resources'][FOREST] += GATHER
 					elif tilemap[playerPos[0]][playerPos[1]]['terrain'] == FOREST:
 						pass
-					elif tilemap[playerPos[0]][playerPos[1]]['resources'][FOREST] >= TERRAFORM and inventory[FOREST] >= 0:
+					elif tilemap[playerPos[0]][playerPos[1]]['resources'][FOREST] >= terraform and inventory[FOREST] >= 0:
 						inventory[FOREST] -= 0
 						tilemap[playerPos[0]][playerPos[1]]['resources'][FOREST] = 0
 						tilemap[playerPos[0]][playerPos[1]]['terrain'] = FOREST
@@ -214,22 +159,30 @@ while True:
 			new_goal = pygame.mouse.get_pos()
 			x = new_goal[0] // TILESIZE
 			y = new_goal[1] // TILESIZE
-			route, tilemap = plot_course(playerPos, tilemap, (x, y))
-			path = route
+			path, route, destination, tilemap = abilities.plot_course(tilemap, goal=(x, y))
+			abilities.move(route, destination, tilemap)
+			playerPos = abilities.position
 
-	playerPos = path.pop(0)
-	if len(path) == 0:
-		route, tilemap = plot_course(playerPos, tilemap)
-		path = route
+	if abilities.enroute == False:
+		route, destination, tilemap = abilities.search(tilemap, HILL)
+		print abilities.memory.scratchpad
+	else:
+		abilities.move(route, destination, tilemap)
+		playerPos = abilities.position
 
 	for row in range(tilemap.width):
 		for column in range(tilemap.height):
 			#pygame.draw.rect(DISPLAYSURF, colors[tilemap[row][column]['terrain']], (column*(TILESIZE + PADDING), row*(TILESIZE + PADDING), TILESIZE , TILESIZE ))
 			# For textures
 			try:
-				DISPLAYSURF.blit(textures[tilemap._map[row][column].terrain], (row*TILESIZE, column*TILESIZE))
+				DISPLAYSURF.blit(TEXTURES[tilemap._map[row][column].terrain], (row*TILESIZE, column*TILESIZE))
+				if tilemap._map[row][column].overlay != None:
+					DISPLAYSURF.blit(PATH, (row*TILESIZE, column*TILESIZE))
+				elif tilemap._map[row][column].ptrain != None:
+					DISPLAYSURF.blit(PTRAIN, (row*TILESIZE, column*TILESIZE))
 			except Exception, e:
 				pass
 			DISPLAYSURF.blit(PLAYER, (playerPos[0]*TILESIZE, playerPos[1]*TILESIZE))
+
 
 	pygame.display.update()

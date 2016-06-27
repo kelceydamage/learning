@@ -38,6 +38,7 @@ class Cell(object):
 		self.h = 0
 		self.f = 0
 		self.terrain = terrain
+		self.overlay = None
 		self.resources = {
 			terrain: random.randint(0, 500)
 		}

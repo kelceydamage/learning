@@ -24,6 +24,7 @@
 # Imports
 #-----------------------------------------------------------------------#
 import heapq
+from config.game.configuration import SPEED
 
 # Class
 #-----------------------------------------------------------------------#
@@ -37,17 +38,10 @@ class AStar(object):
 		self.grid_height = grid_height
 		self.grid_width = grid_width
 		self.route = []
-		self.weights = {
-			0: 40,
-			1: 10,
-			2: 0,
-			3: 30,
-			4: 15,
-			5: 5,
-			7: 150,
-			8: 20,
-			9: 0
-		}
+		self.weights = SPEED
+		self.train = None
+		self.scan = False
+		self.counter = 0
 
 	def re_init(self):
 		self.opened = []
@@ -57,7 +51,10 @@ class AStar(object):
 		self.route = []
 
 	def get_heuristics(self, cell):
-		val = self.weights[cell.terrain]
+		if self.train == False:
+			val = self.weights[cell.terrain][0]
+		else:
+			val = 1
 		h = val * (abs(cell.x - self.end.x) + abs(cell.y - self.end.y))
 		return h
 
@@ -65,10 +62,19 @@ class AStar(object):
 		try:
 			return self.cells[x * self.grid_height + y]
 		except Exception, e:
+			print 'ERR', x, y
+			print 'CELL_LIST', len(self.cells)
 			print 'Cell Len', len(self.cells), 'Cell Fetch', (x * self.grid_height + y), (x, self.grid_height, y)
 			print 'Get Cell', x, y, e
 			print x * self.grid_height + y
 			print len(self.cells)
+
+	def path_local(self, cells, current_cell, target):
+		self.cells = cells
+		adj_cells = self.get_adjacent_cells(current_cell)
+		for cell in adj_cells:
+			if target in cell.resources:
+				return (cell.x, cell.y)
 
 	def get_adjacent_cells(self, cell):
 		def validate(n_cell, cell, r):
@@ -107,7 +113,11 @@ class AStar(object):
 		path = [(cell.x, cell.y)]
 		while cell.parent is not self.start:
 			cell = cell.parent
-			self.route.append((cell.x, cell.y))
+			if cell != None:
+				#print 'NO_PARENT', (cell.x, cell.y)
+				self.route.append((cell.x, cell.y))
+			else:
+				break
 		path.append((self.start.x, self.start.y))
 		path.reverse()
 		return path, self.route
@@ -118,27 +128,36 @@ class AStar(object):
 		adj.parent = cell
 		adj.f = adj.h + adj.g
 
-	def solve(self, start, end, cells):
+	def solve(self, start, end, cells, train=False, scan=False, target=None):
+		self.scan = scan
+		self.train = train
 		self.re_init()
 		self.cells = cells
 		self.start = self.get_cell(start[0], start[1])
 		self.end = self.get_cell(end[0], end[1])
 		# add starting cell to open heap queue
-		print 'START', self.start.x, self.start.y, self.end.x, self.end.y
 		heapq.heappush(self.opened, (self.start.f, self.start))
 		while len(self.opened):
 			if not self.end.reachable:
-				print ((self.end.x, self.end.y),), ((0,0),)
-				return ((self.end.x, self.end.y),), ((0,0),)
+				return ((self.end.x, self.end.y))
 			# pop cell from heap queue
 			f, cell = heapq.heappop(self.opened)
 			# add cell to closed list so we don't process it twice
 			self.closed.add(cell)
 			# if ending cell, return found path
+			
+			if self.scan == True:
+				if target in cell.resources:
+					self.counter += 1
+			if self.counter == 2:
+				self.end = cell
+				self.counter = 0
 			if cell is self.end:
 				path, route = self.get_path()
+				if route == []:
+					route = [(self.start.x, self.start.y)]
 				self.re_init()
-				return route
+				return path, route
 
 			adj_cells = self.get_adjacent_cells(cell)
 			for adj_cell in adj_cells:

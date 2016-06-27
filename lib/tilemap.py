@@ -39,6 +39,7 @@ class Map(object):
 		self.player_goal = []
 		self.old_route_terrain = []
 		self.reachable = []
+		self.train = False
 		self.init_grid()
 
 	def init_grid(self):
@@ -64,21 +65,23 @@ class Map(object):
 				self.cells.append(self._map[x][y])
 
 	def display_route(self, route):
-		print 'r', len(route)
 		for coord in route:
 			tile = self._map[coord[0]][coord[1]].terrain
 			self.old_route_terrain.append([coord[0], coord[1], tile])
 			x = coord[0]
 			y = coord[1]
-			self._map[x][y].terrain = 5
+			if self.train == True:
+				self._map[x][y].ptrain = 98
+			else:
+				self._map[x][y].overlay = 99
 
 	def clean_up_map(self):
-		print 'o', len(self.old_route_terrain)
 		for coord in self.old_route_terrain:
 			x = coord[0]
 			y = coord[1]
 			tile = coord[2]
-			self._map[x][y].terrain = tile
+			self._map[x][y].overlay = None
+			self._map[x][y].ptrain = None
 		self.old_route_terrain = []
 
 	def start_blob(self, recursion=30):
@@ -91,7 +94,6 @@ class Map(object):
 			return self.reachable[coord]
 		except Exception, e:
 			t = self.reachable[coord]
-			print t.x, t.y
 			return self.start_blob(recursion)
 
 	def update_reachable(self):
@@ -99,3 +101,4 @@ class Map(object):
 			for y in self._map[x]:
 				if self._map[x][y].reachable == True:
 					self.reachable.append(self._map[x][y])
+
